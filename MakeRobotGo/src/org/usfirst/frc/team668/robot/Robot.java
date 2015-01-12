@@ -1,28 +1,26 @@
 package org.usfirst.frc.team668.robot;
 
-import com.ni.vision.NIVision;
+import org.usfirst.frc.team668.robot.commands.ExampleCommand;
+import org.usfirst.frc.team668.robot.subsystems.ExampleSubsystem;
 
-import com.ni.vision.NIVision.*;
+import com.ni.vision.NIVision.Image;
 
+import edu.wpi.first.wpilibj.CANJaguar;
+import edu.wpi.first.wpilibj.CANTalon;
+import edu.wpi.first.wpilibj.Compressor;
+import edu.wpi.first.wpilibj.DoubleSolenoid;
+import edu.wpi.first.wpilibj.DoubleSolenoid.Value;
 import edu.wpi.first.wpilibj.IterativeRobot;
 import edu.wpi.first.wpilibj.Jaguar;
 import edu.wpi.first.wpilibj.Joystick;
+import edu.wpi.first.wpilibj.PowerDistributionPanel;
+import edu.wpi.first.wpilibj.Servo;
+import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.command.Command;
 import edu.wpi.first.wpilibj.command.Scheduler;
 import edu.wpi.first.wpilibj.livewindow.LiveWindow;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
-import edu.wpi.first.wpilibj.can.*;
-import edu.wpi.first.wpilibj.PowerDistributionPanel;
-import edu.wpi.first.wpilibj.Timer;
-import edu.wpi.first.wpilibj.smartdashboard.*;
-import edu.wpi.first.wpilibj.CANJaguar;
-import edu.wpi.first.wpilibj.Servo;
-import edu.wpi.first.wpilibj.CameraServer;
 import edu.wpi.first.wpilibj.vision.AxisCamera;
-
-import org.usfirst.frc.team668.robot.commands.ExampleCommand;
-import org.usfirst.frc.team668.robot.subsystems.ExampleSubsystem;
-import edu.wpi.first.wpilibj.CANTalon;
 
 /**
  * The VM is configured to automatically run this class, and to call the
@@ -42,6 +40,21 @@ public class Robot extends IterativeRobot {
 	public static Servo camServoVert, camServoHor;
 	public static Image frame;
 	public static AxisCamera camera;
+	public static Compressor compressor1;
+	public static DoubleSolenoid doubleSol1;
+
+	public static final int INIT_STATE = 0;
+	public static final int MOVE_FORWARD_STATE = 1;
+	public static final int TURN_RIGHT_STATE = 2;
+	public static final int PNEUMATIC_CHANGE_STATE = 3;
+	public static final int MOVE_BACK_STATE = 4;
+	public static final int TURN_BACK_STATE = 5;
+
+	public long autoTimer = -1;
+	public int state = INIT_STATE;
+	
+	boolean cameraInitialized = false;
+	
 
 	Command autonomousCommand;
 
@@ -54,6 +67,25 @@ public class Robot extends IterativeRobot {
 		// instantiate the command used for the autonomous period
 		autonomousCommand = new ExampleCommand();
 		SmartDashboard.putString("DB/String 0", "hello world");
+		
+		joystickLeft = new Joystick(1);
+		joystickRight = new Joystick(2);
+		joystickCamera = new Joystick(0);
+
+		canTalonLeft = new CANTalon(2);
+		canTalonRight = new CANTalon(1);
+		
+
+		 camServoHor = new Servo(5);
+		 camServoVert = new Servo(4);
+		
+		if (VisionPractice.initializeCamera() > 0) cameraInitialized = true;
+		SmartDashboard.putBoolean("Camera Initialized", cameraInitialized);
+
+//		compressor1 = new Compressor(0);
+//		compressor1.setClosedLoopControl(true);
+//
+//		doubleSol1 = new DoubleSolenoid(1, 1, 2);
 	}
 
 	public void disabledPeriodic() {
@@ -64,6 +96,8 @@ public class Robot extends IterativeRobot {
 		// schedule the autonomous command (example)
 		if (autonomousCommand != null)
 			autonomousCommand.start();
+
+		state = INIT_STATE;
 	}
 
 	/**
@@ -72,6 +106,52 @@ public class Robot extends IterativeRobot {
 
 	public void autonomousPeriodic() {
 		Scheduler.getInstance().run();
+
+		switch (state) {
+
+		case INIT_STATE:
+			canTalonLeft.set(0.0);
+			canTalonRight.set(0.0);
+			state = MOVE_FORWARD_STATE;
+			autoTimer = -1;
+			SmartDashboard.putString("DB/String 1", "init");
+
+			break;
+
+		case MOVE_FORWARD_STATE:
+			SmartDashboard.putString("DB/String 1", "move forward");
+			canTalonLeft.set(-.35);
+			canTalonRight.set(.35);
+			if (autoTimer == -1)
+				autoTimer = System.currentTimeMillis();
+			if (System.currentTimeMillis() - autoTimer >= 3000) {
+
+				state = TURN_RIGHT_STATE;
+
+				autoTimer = -1;
+			}
+
+			break;
+
+		case TURN_RIGHT_STATE:
+			SmartDashboard.putString("DB/String 1", "turn right");
+			canTalonRight.set(0.25);
+			canTalonLeft.set(0.25);
+			if (autoTimer == -1)
+				autoTimer = System.currentTimeMillis();
+			if (System.currentTimeMillis() - autoTimer >= 1250) {
+
+				canTalonLeft.set(0.0);
+				canTalonRight.set(0.0);
+
+				state = PNEUMATIC_CHANGE_STATE;
+
+				autoTimer = -1;
+			}
+
+			break;
+
+		}
 	}
 
 	public void teleopInit() {
@@ -82,12 +162,7 @@ public class Robot extends IterativeRobot {
 		if (autonomousCommand != null)
 			autonomousCommand.cancel();
 
-		joystickLeft = new Joystick(1);
-		joystickRight = new Joystick(2);
-		joystickCamera = new Joystick(0);
-
-		canTalonLeft = new CANTalon(2);
-		canTalonRight = new CANTalon(1);
+		
 
 		// jaguar2 = new Jaguar(2);
 		// jaguar3 = new Jaguar(3);
@@ -97,8 +172,6 @@ public class Robot extends IterativeRobot {
 		// canJaguarRight = new CANJaguar (1); // same as above
 		// !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-		// camServoHor = new Servo(5);
-		// camServoVert = new Servo(4);
 		//
 		// frame = NIVision.imaqCreateImage(NIVision.ImageType.IMAGE_RGB, 0);
 		// camera = new AxisCamera("10.6.68.22");
@@ -106,19 +179,18 @@ public class Robot extends IterativeRobot {
 		// jaguar2.set(-0.5);
 		// jaguar3.set(0.5);
 
-		// PowerDistributionPanel pdp = new PowerDistributionPanel();
+		PowerDistributionPanel pdp = new PowerDistributionPanel();
 
-		// System.out.println("Temperature: " + pdp.getTemperature());
-		// System.out.println("Voltage " + pdp.getVoltage());
-		// SmartDashboard.putNumber("Temperature", pdp.getTemperature());
-		// SmartDashboard.putNumber("Voltage", pdp.getVoltage());
-		// for(int i = 13; i < 16; i++)
-		// {
-		// System.out.println("Current from channel " + i + " is " +
-		// pdp.getCurrent(i));
-		// SmartDashboard.putNumber("Current from Channel " + i,
-		// pdp.getCurrent(i));
-		// }
+		System.out.println("Temperature: " + pdp.getTemperature());
+		System.out.println("Voltage " + pdp.getVoltage());
+		SmartDashboard.putNumber("Temperature", pdp.getTemperature());
+		SmartDashboard.putNumber("Voltage", pdp.getVoltage());
+		for (int i = 13; i < 16; i++) {
+			System.out.println("Current from channel " + i + " is "
+					+ pdp.getCurrent(i));
+			SmartDashboard.putNumber("Current from Channel " + i,
+					pdp.getCurrent(i));
+		}
 		/*
 		 * SmartDashboard.putNumber("CANJaguarLeft Speed: ",
 		 * canJaguarLeft.getSpeed());
@@ -164,12 +236,10 @@ public class Robot extends IterativeRobot {
 		// NIVision.Rect rect = new NIVision.Rect(10, 10, 100, 100);
 		//
 		// //camera moves
-		// double moveCamHor = ((joystickCamera.getX() + 1) / 2); //horizontal
-		// is top little midget circular joystick
-		// double moveCamVert = (1 - ((joystickCamera.getY() + 1) / 2));
-		// //vertical is top little midget circular joystick
-		// camServoHor.set(moveCamHor);
-		// camServoVert.set(moveCamVert);
+		 double moveCamHor = ((joystickCamera.getX() + 1) / 2);
+		 double moveCamVert = (1 - ((joystickCamera.getY() + 1) / 2));
+		 camServoHor.set(moveCamHor);
+		 camServoVert.set(moveCamVert);
 		//
 		// //camera sees
 		// camera.getImage(frame);
@@ -182,15 +252,30 @@ public class Robot extends IterativeRobot {
 
 		canTalonLeft.set(leftSpeed);
 		canTalonRight.set(-rightSpeed);
-		
-		
-		
-		
-		
-		SmartDashboard.putNumber("CANTalon Left Bus Voltage ", canTalonLeft.getBusVoltage());
-		
-		SmartDashboard.putNumber("CANTalon Right Bus Voltage ", canTalonRight.getBusVoltage());
-		
+
+//		if (joystickCamera.getRawButton(5)) {
+//
+//			doubleSol1.set(Value.kForward);
+//
+//		} else if (joystickCamera.getRawButton(6)) {
+//
+//			doubleSol1.set(Value.kReverse);
+//
+//		} else if (joystickCamera.getRawButton(3)) {
+//
+//			doubleSol1.set(Value.kOff);
+//
+//		}
+
+		SmartDashboard.putNumber("CANTalon Left Bus Voltage ",
+				canTalonLeft.getBusVoltage());
+
+		SmartDashboard.putNumber("CANTalon Right Bus Voltage ",
+				canTalonRight.getBusVoltage());
+
+		if (joystickCamera.getRawButton(1) && cameraInitialized) {
+			VisionPractice.takePicture("practice");
+		}
 	}
 
 	/**
