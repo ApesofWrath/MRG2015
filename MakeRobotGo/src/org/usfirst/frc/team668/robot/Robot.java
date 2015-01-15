@@ -1,10 +1,11 @@
+
 package org.usfirst.frc.team668.robot;
 
 import org.usfirst.frc.team668.robot.commands.ExampleCommand;
 import org.usfirst.frc.team668.robot.subsystems.ExampleSubsystem;
 
 import com.ni.vision.NIVision.Image;
-
+import edu.wpi.first.wpilibj.Encoder;
 import edu.wpi.first.wpilibj.CANJaguar;
 import edu.wpi.first.wpilibj.CANTalon;
 import edu.wpi.first.wpilibj.Compressor;
@@ -42,6 +43,8 @@ public class Robot extends IterativeRobot {
 	public static AxisCamera camera;
 	public static Compressor compressor1;
 	public static DoubleSolenoid doubleSol1;
+	public static Encoder encoder1;
+	public static Encoder encoder2;
 
 	public static final int INIT_STATE = 0;
 	public static final int MOVE_FORWARD_STATE = 1;
@@ -78,14 +81,21 @@ public class Robot extends IterativeRobot {
 
 		 camServoHor = new Servo(5);
 		 camServoVert = new Servo(4);
-		
+
+		SmartDashboard.putBoolean("Camera Initialized", false);
 		if (VisionPractice.initializeCamera() > 0) cameraInitialized = true;
 		SmartDashboard.putBoolean("Camera Initialized", cameraInitialized);
 
-//		compressor1 = new Compressor(0);
+//		compressor1 = new Compressor(10);
 //		compressor1.setClosedLoopControl(true);
 //
-//		doubleSol1 = new DoubleSolenoid(1, 1, 2);
+//		doubleSol1 = new DoubleSolenoid(10, 0, 1);
+		
+//		encoder1 = new Encoder(1, 2);
+//		encoder2 = new Encoder(3, 4);
+		
+//		encoder1.reset();
+//		encoder2.reset();
 	}
 
 	public void disabledPeriodic() {
@@ -245,7 +255,25 @@ public class Robot extends IterativeRobot {
 		// camera.getImage(frame);
 		// CameraServer.getInstance().setImage(frame);
 		//
-
+		 
+//		 double rateRight = encoder1.getRate(); //gets rate
+//		 double rateLeft = encoder2.getRate();
+//		 
+//		 double distanceRight = encoder1.getDistance(); // gets distance
+//		 double distanceLeft = encoder2.getDistance();
+//		 
+//		 boolean directionRight = encoder1.getDirection(); // gets direction
+//		 boolean directionLeft = encoder2.getDirection();
+//		 
+//		 SmartDashboard.putNumber("Right Motor Speed", rateRight);
+//		 SmartDashboard.putNumber("Left Motor Speed", rateLeft);
+//		 
+//		 SmartDashboard.putNumber("Right Motor Distance", distanceRight);
+//		 SmartDashboard.putNumber("Left Motor Speed", distanceLeft);
+//		 
+//		 SmartDashboard.putBoolean("Right Direction", directionRight);
+//		 SmartDashboard.putBoolean("Left Motor Direction", directionLeft);
+		 
 		// movement stuff
 		double leftSpeed = (joystickLeft.getY());
 		double rightSpeed = (joystickRight.getY());
