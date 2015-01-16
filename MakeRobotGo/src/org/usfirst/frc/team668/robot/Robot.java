@@ -1,3 +1,8 @@
+//Test Code for a Robot Named Sarah: The Sequel
+//Dedicated to Jacob Snyder
+//Written by the Programming Team of 668, 2015
+
+//DEAR FUTURE: THIS IS WHAT WE KNOW SO FAR
 
 package org.usfirst.frc.team668.robot;
 
@@ -5,6 +10,7 @@ import org.usfirst.frc.team668.robot.commands.ExampleCommand;
 import org.usfirst.frc.team668.robot.subsystems.ExampleSubsystem;
 
 import com.ni.vision.NIVision.Image;
+
 import edu.wpi.first.wpilibj.Encoder;
 import edu.wpi.first.wpilibj.CANJaguar;
 import edu.wpi.first.wpilibj.CANTalon;
@@ -22,6 +28,8 @@ import edu.wpi.first.wpilibj.command.Scheduler;
 import edu.wpi.first.wpilibj.livewindow.LiveWindow;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj.vision.AxisCamera;
+
+import java.util.ArrayList;
 
 /**
  * The VM is configured to automatically run this class, and to call the
@@ -47,11 +55,10 @@ public class Robot extends IterativeRobot {
 	public static Encoder encoder2;
 
 	public static final int INIT_STATE = 0;
-	public static final int MOVE_FORWARD_STATE = 1;
-	public static final int TURN_RIGHT_STATE = 2;
-	public static final int PNEUMATIC_CHANGE_STATE = 3;
-	public static final int MOVE_BACK_STATE = 4;
-	public static final int TURN_BACK_STATE = 5;
+	public static final int DO_SEQUENCE_STATE = 1;
+	public static final int PNEUMATIC_CHANGE_STATE = 2;
+	public static final int DO_SEQUENCE_DIFFERENTLY_STATE = 3;
+	public static final int WAIT_FOR_END_STATE = 4; 
 
 	public long autoTimer = -1;
 	public int state = INIT_STATE;
@@ -65,6 +72,47 @@ public class Robot extends IterativeRobot {
 	 * This function is run when the robot is first started up and should be
 	 * used for any initialization code.
 	 */
+	
+	public void autonSequence(double forwardDistance, double turnDistance, double motorSpeed) {
+		ArrayList<Double> fullRightDistance = new ArrayList<Double>(5);
+		ArrayList<Double> fullLeftDistance = new ArrayList<Double>(5);
+		
+		double forwardVal = forwardDistance; // The normal distance to move forwards
+		double turnVal = turnDistance; // No, you don't need separate left and right turns.
+		boolean doneRight = false, doneLeft = false;
+		
+//		fullRightDistance.add(0,forwardVal); fullLeftDistance(0,forwardVal); // Forward
+//		fullRightDistance.add(1,turnVal); fullLeftDistance(1,-turnVal); // Turn Left
+//		fullRightDistance.add(2,forwardVal); fullLeftDistance(2,forwardVal);
+//		fullRightDistance.add(3,-turnVal); fullLeftDistance(3,turnVal); // Turn Right
+//		fullRightDistance.add(4,forwardVal); fullLeftDistance(4,forwardVal);
+		
+		for(int i = 0; i < 5; i++) { //If we add extra steps, change necessary
+			encoder1.reset();
+			encoder2.reset();
+			
+			while(!doneRight && !doneLeft) {
+				if (encoder1.getDistance() < fullRightDistance.get(i)){ // Motors will only be set if we want the final distance to be forwards
+					canTalonRight.set(motorSpeed);
+				} else {
+					canTalonRight.set(0.0);
+					doneRight = true;
+				}
+				
+				if (encoder2.getDistance() < fullLeftDistance.get(i)){
+					canTalonLeft.set(motorSpeed);
+				} else {
+					canTalonLeft.set(0.0);
+					doneLeft = true;
+				}
+			}
+			
+			doneRight = false;
+			doneLeft = false;
+			
+		}
+	}
+	
 	public void robotInit() {
 		oi = new OI();
 		// instantiate the command used for the autonomous period
@@ -83,19 +131,21 @@ public class Robot extends IterativeRobot {
 		 camServoVert = new Servo(4);
 
 		SmartDashboard.putBoolean("Camera Initialized", false);
-		if (VisionPractice.initializeCamera() > 0) cameraInitialized = true;
+		double c = VisionPractice.initializeCamera();
+		if (c > 0) cameraInitialized = true;
 		SmartDashboard.putBoolean("Camera Initialized", cameraInitialized);
+		SmartDashboard.putNumber("Init Time", c);
 
-//		compressor1 = new Compressor(10);
-//		compressor1.setClosedLoopControl(true);
-//
-//		doubleSol1 = new DoubleSolenoid(10, 0, 1);
+		compressor1 = new Compressor(10); // 10 is CANfirmed (check at 10.6.68.21) That was Ari with the CAN! Maybe he should kick the CAN. Ari aCAN!
+		compressor1.setClosedLoopControl(true); // we don't know what this is
+ 
+		doubleSol1 = new DoubleSolenoid(10, 1, 0); // values confirmed to be correct
 		
-//		encoder1 = new Encoder(1, 2);
-//		encoder2 = new Encoder(3, 4);
+		encoder1 = new Encoder(1, 2);
+		encoder2 = new Encoder(3, 4);
 		
-//		encoder1.reset();
-//		encoder2.reset();
+		encoder1.reset();
+		encoder2.reset();
 	}
 
 	public void disabledPeriodic() {
@@ -108,59 +158,63 @@ public class Robot extends IterativeRobot {
 			autonomousCommand.start();
 
 		state = INIT_STATE;
+		
+
 	}
 
 	/**
 	 * This function is called periodically during autonomous
 	 */
-
+	
 	public void autonomousPeriodic() {
 		Scheduler.getInstance().run();
-
+		
 		switch (state) {
 
 		case INIT_STATE:
+			
 			canTalonLeft.set(0.0);
 			canTalonRight.set(0.0);
-			state = MOVE_FORWARD_STATE;
-			autoTimer = -1;
+//			state = MOVE_FORWARD_STATE;
 			SmartDashboard.putString("DB/String 1", "init");
 
 			break;
 
-		case MOVE_FORWARD_STATE:
-			SmartDashboard.putString("DB/String 1", "move forward");
-			canTalonLeft.set(-.35);
-			canTalonRight.set(.35);
-			if (autoTimer == -1)
-				autoTimer = System.currentTimeMillis();
-			if (System.currentTimeMillis() - autoTimer >= 3000) {
-
-				state = TURN_RIGHT_STATE;
-
-				autoTimer = -1;
-			}
-
+		case DO_SEQUENCE_STATE:
+			
+			SmartDashboard.putString("DB/String 1", "sequency");
+			autonSequence(10.0,10.0,0.333);
+			state = PNEUMATIC_CHANGE_STATE;
+			
 			break;
 
-		case TURN_RIGHT_STATE:
-			SmartDashboard.putString("DB/String 1", "turn right");
-			canTalonRight.set(0.25);
-			canTalonLeft.set(0.25);
-			if (autoTimer == -1)
-				autoTimer = System.currentTimeMillis();
-			if (System.currentTimeMillis() - autoTimer >= 1250) {
-
-				canTalonLeft.set(0.0);
-				canTalonRight.set(0.0);
-
-				state = PNEUMATIC_CHANGE_STATE;
-
-				autoTimer = -1;
+		case PNEUMATIC_CHANGE_STATE:
+			
+			SmartDashboard.putString("DB/String 1", "pneumatics");
+			for (int i=0; i<5; i++) { //this makes the repeats! it's not necessaries!<
+//				doubleSol1.set("Forward");
+				Timer.delay(2);
+//				doubleSol1.set("Reverse");
+				Timer.delay(2);
 			}
+			
+			state = DO_SEQUENCE_DIFFERENTLY_STATE;
+//			doubleSol1.set("Off")
 
 			break;
+			
+		case DO_SEQUENCE_DIFFERENTLY_STATE:
 
+			SmartDashboard.putString("DB/String 1", "sequency");
+			autonSequence(20.0,10.0,0.333);
+			state = WAIT_FOR_END_STATE;
+			
+			break;
+
+		case WAIT_FOR_END_STATE:
+			
+			break;
+		
 		}
 	}
 
@@ -315,3 +369,7 @@ public class Robot extends IterativeRobot {
 	}
 
 }
+
+//LIVE LONG AND PROSPER
+
+//The End.

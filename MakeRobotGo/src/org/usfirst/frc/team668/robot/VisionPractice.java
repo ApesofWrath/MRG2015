@@ -7,8 +7,10 @@ package org.usfirst.frc.team668.robot;
  */
 
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
+
 import edu.wpi.first.wpilibj.vision.AxisCamera;
 import edu.wpi.first.wpilibj.image.*;
+import edu.wpi.first.wpilibj.CameraServer;
 import edu.wpi.first.wpilibj.Timer;
 
 import java.util.Calendar;
@@ -76,7 +78,7 @@ public class VisionPractice {
 																// result report
 																// that reports
 																// a target
-			this.isHot = isHot;
+			this.isHot = isHot;       
 			this.distance = distance;
 			this.targetExists = true;
 		}
@@ -96,21 +98,20 @@ public class VisionPractice {
 			camera = new AxisCamera("10.6.68.20");
 			HSLImage image;
 			while (t.get() < 10) {
-				if (camera.isFreshImage()) {
-					image = camera.getImage();
-					if (image != null) {
-						t.stop();
-						return t.get();
-					}
+				image = camera.getImage();
+				if (image != null) {
+					t.stop();
+					return t.get();
 				}
 			}
 			image = camera.getImage();
 			if (image != null) {
 				t.stop();
 				return t.get();
-			} else return -1.0;
+			} else
+				return -1.0;
 		}
-		
+
 		catch (NIVisionException e) {
 			SmartDashboard.putString("Error", e.getMessage());
 			return -1.0;
