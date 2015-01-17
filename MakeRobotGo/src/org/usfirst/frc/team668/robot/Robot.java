@@ -43,7 +43,7 @@ public class Robot extends IterativeRobot {
 	public static final ExampleSubsystem exampleSubsystem = new ExampleSubsystem();
 	public static OI oi;
 	public static Jaguar jaguar2, jaguar3;
-	public static Joystick joystickLeft, joystickRight, joystickCamera;
+	public static Joystick joystickLeft, joystickRight, joystickOp;
 	public static CANJaguar canJaguarLeft, canJaguarRight;
 	public static CANTalon canTalonLeft, canTalonRight;
 	public static Servo camServoVert, camServoHor;
@@ -51,8 +51,8 @@ public class Robot extends IterativeRobot {
 	public static AxisCamera camera;
 	public static Compressor compressor1;
 	public static DoubleSolenoid doubleSol1;
-	public static Encoder encoder1;
-	public static Encoder encoder2;
+	public static Encoder encoderRight;
+	public static Encoder encoderLeft;
 
 	public static final int INIT_STATE = 0;
 	public static final int DO_SEQUENCE_STATE = 1;
@@ -81,25 +81,30 @@ public class Robot extends IterativeRobot {
 		double turnVal = turnDistance; // No, you don't need separate left and right turns.
 		boolean doneRight = false, doneLeft = false;
 		
-//		fullRightDistance.add(0,forwardVal); fullLeftDistance(0,forwardVal); // Forward
-//		fullRightDistance.add(1,turnVal); fullLeftDistance(1,-turnVal); // Turn Left
-//		fullRightDistance.add(2,forwardVal); fullLeftDistance(2,forwardVal);
-//		fullRightDistance.add(3,-turnVal); fullLeftDistance(3,turnVal); // Turn Right
-//		fullRightDistance.add(4,forwardVal); fullLeftDistance(4,forwardVal);
+//		fullRightDistance.add(0,forwardVal);
+//		fullLeftDistance.add(0,forwardVal); // Forward
+//		fullRightDistance.add(1,turnVal);
+//		fullLeftDistance.add(1,-turnVal); // Turn Left
+//		fullRightDistance.add(2,forwardVal);
+//		fullLeftDistance.add(2,forwardVal);
+//		fullRightDistance.add(3,-turnVal);
+//		fullLeftDistance.add(3,turnVal); // Turn Right
+//		fullRightDistance.add(4,forwardVal);
+//		fullLeftDistance.add(4,forwardVal);
 		
 		for(int i = 0; i < 5; i++) { //If we add extra steps, change necessary
-			encoder1.reset();
-			encoder2.reset();
+			encoderRight.reset();
+			encoderLeft.reset();
 			
 			while(!doneRight && !doneLeft) {
-				if (encoder1.getDistance() < fullRightDistance.get(i)){ // Motors will only be set if we want the final distance to be forwards
+				if (encoderRight.getDistance() < fullRightDistance.get(i)){ // Motors will only be set if we want the final distance to be forwards
 					canTalonRight.set(motorSpeed);
 				} else {
 					canTalonRight.set(0.0);
 					doneRight = true;
 				}
 				
-				if (encoder2.getDistance() < fullLeftDistance.get(i)){
+				if (encoderLeft.getDistance() < fullLeftDistance.get(i)){
 					canTalonLeft.set(motorSpeed);
 				} else {
 					canTalonLeft.set(0.0);
@@ -121,7 +126,7 @@ public class Robot extends IterativeRobot {
 		
 		joystickLeft = new Joystick(1);
 		joystickRight = new Joystick(2);
-		joystickCamera = new Joystick(0);
+		joystickOp = new Joystick(0);
 
 		canTalonLeft = new CANTalon(2);
 		canTalonRight = new CANTalon(1);
@@ -130,22 +135,21 @@ public class Robot extends IterativeRobot {
 		 camServoHor = new Servo(5);
 		 camServoVert = new Servo(4);
 
-		SmartDashboard.putBoolean("Camera Initialized", false);
-		double c = VisionPractice.initializeCamera();
-		if (c > 0) cameraInitialized = true;
-		SmartDashboard.putBoolean("Camera Initialized", cameraInitialized);
-		SmartDashboard.putNumber("Init Time", c);
+//		SmartDashboard.putBoolean("Camera Initialized", false);
+//		double c = VisionPractice.initializeCamera();
+//		if (c > 0) cameraInitialized = true;
+//		SmartDashboard.putBoolean("Camera Initialized", cameraInitialized);
+//		SmartDashboard.putNumber("Init Time", c);
 
 		compressor1 = new Compressor(10); // 10 is CANfirmed (check at 10.6.68.21) That was Ari with the CAN! Maybe he should kick the CAN. Ari aCAN!
 		compressor1.setClosedLoopControl(true); // we don't know what this is
  
 		doubleSol1 = new DoubleSolenoid(10, 1, 0); // values confirmed to be correct
 		
-		encoder1 = new Encoder(1, 2);
-		encoder2 = new Encoder(3, 4);
-		
-		encoder1.reset();
-		encoder2.reset();
+		encoderRight = new Encoder(0, 1);
+		encoderLeft = new Encoder(2, 3, true);
+		encoderRight.reset();
+		encoderLeft.reset();
 	}
 
 	public void disabledPeriodic() {
@@ -226,6 +230,8 @@ public class Robot extends IterativeRobot {
 		if (autonomousCommand != null)
 			autonomousCommand.cancel();
 
+		encoderRight.reset();
+		encoderLeft.reset();
 		
 
 		// jaguar2 = new Jaguar(2);
@@ -247,7 +253,7 @@ public class Robot extends IterativeRobot {
 
 		System.out.println("Temperature: " + pdp.getTemperature());
 		System.out.println("Voltage " + pdp.getVoltage());
-		SmartDashboard.putNumber("Temperature", pdp.getTemperature());
+		SmartDashboard.putNumber("Temperature", pdp.getTemperature()); // Current output is negative!!!
 		SmartDashboard.putNumber("Voltage", pdp.getVoltage());
 		for (int i = 13; i < 16; i++) {
 			System.out.println("Current from channel " + i + " is "
@@ -300,11 +306,18 @@ public class Robot extends IterativeRobot {
 		// NIVision.Rect rect = new NIVision.Rect(10, 10, 100, 100);
 		//
 		// //camera moves
-		 double moveCamHor = ((joystickCamera.getX() + 1) / 2);
-		 double moveCamVert = (1 - ((joystickCamera.getY() + 1) / 2));
+		 double moveCamHor = ((joystickOp.getX() + 1) / 2);
+		 double moveCamVert = (1 - ((joystickOp.getY() + 1) / 2));
 		 camServoHor.set(moveCamHor);
 		 camServoVert.set(moveCamVert);
-		//
+		 
+		 System.out.println("Right Distance: " + encoderRight.getDistance());
+		 System.out.println("Left Distance: " + encoderLeft.getDistance());
+		
+		 SmartDashboard.putNumber("Right Distance: ", encoderRight.getDistance());
+		 SmartDashboard.putNumber("Left Distance", encoderLeft.getDistance());
+		 
+		 
 		// //camera sees
 		// camera.getImage(frame);
 		// CameraServer.getInstance().setImage(frame);
@@ -355,9 +368,9 @@ public class Robot extends IterativeRobot {
 		SmartDashboard.putNumber("CANTalon Right Bus Voltage ",
 				canTalonRight.getBusVoltage());
 
-		if (joystickCamera.getRawButton(1) && cameraInitialized) {
-			VisionPractice.takePicture("practice");
-		}
+//		if (joystickCamera.getRawButton(1) && cameraInitialized) {
+//			VisionPractice.takePicture("practice");
+//		}
 	}
 
 	/**
@@ -366,6 +379,7 @@ public class Robot extends IterativeRobot {
 
 	public void testPeriodic() {
 		LiveWindow.run();
+		
 	}
 
 }
