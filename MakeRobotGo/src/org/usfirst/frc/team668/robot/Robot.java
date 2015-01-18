@@ -45,7 +45,9 @@ public class Robot extends IterativeRobot {
 	public static Jaguar jaguar2, jaguar3;
 	public static Joystick joystickLeft, joystickRight, joystickOp;
 	public static CANJaguar canJaguarLeft, canJaguarRight;
-	public static CANTalon canTalonLeft, canTalonRight;
+	public static CANTalon canTalonLeft, canTalonRight, canTalonLeft2,
+			canTalonRight2, canTalonIntakeLeft, canTalonIntakeRight,
+			canTalonElevator, canTalonElevator2;
 	public static Servo camServoVert, camServoHor;
 	public static Image frame;
 	public static AxisCamera camera;
@@ -58,13 +60,12 @@ public class Robot extends IterativeRobot {
 	public static final int DO_SEQUENCE_STATE = 1;
 	public static final int PNEUMATIC_CHANGE_STATE = 2;
 	public static final int DO_SEQUENCE_DIFFERENTLY_STATE = 3;
-	public static final int WAIT_FOR_END_STATE = 4; 
+	public static final int WAIT_FOR_END_STATE = 4;
 
 	public long autoTimer = -1;
 	public int state = INIT_STATE;
-	
+
 	boolean cameraInitialized = false;
-	
 
 	Command autonomousCommand;
 
@@ -72,80 +73,108 @@ public class Robot extends IterativeRobot {
 	 * This function is run when the robot is first started up and should be
 	 * used for any initialization code.
 	 */
-	
-	public void autonSequence(double forwardDistance, double turnDistance, double motorSpeed) {
+
+	public void autonSequence(double forwardDistance, double turnDistance,
+			double motorSpeed) {
 		ArrayList<Double> fullRightDistance = new ArrayList<Double>(5);
 		ArrayList<Double> fullLeftDistance = new ArrayList<Double>(5);
-		
-		double forwardVal = forwardDistance; // The normal distance to move forwards
-		double turnVal = turnDistance; // No, you don't need separate left and right turns.
+
+		double forwardVal = forwardDistance; // The normal distance to move
+												// forwards
+		double turnVal = turnDistance; // No, you don't need separate left and
+										// right turns.
 		boolean doneRight = false, doneLeft = false;
-		
-//		fullRightDistance.add(0,forwardVal);
-//		fullLeftDistance.add(0,forwardVal); // Forward
-//		fullRightDistance.add(1,turnVal);
-//		fullLeftDistance.add(1,-turnVal); // Turn Left
-//		fullRightDistance.add(2,forwardVal);
-//		fullLeftDistance.add(2,forwardVal);
-//		fullRightDistance.add(3,-turnVal);
-//		fullLeftDistance.add(3,turnVal); // Turn Right
-//		fullRightDistance.add(4,forwardVal);
-//		fullLeftDistance.add(4,forwardVal);
-		
-		for(int i = 0; i < 5; i++) { //If we add extra steps, change necessary
+
+		// fullRightDistance.add(0,forwardVal);
+		// fullLeftDistance.add(0,forwardVal); // Forward
+		// fullRightDistance.add(1,turnVal);
+		// fullLeftDistance.add(1,-turnVal); // Turn Left
+		// fullRightDistance.add(2,forwardVal);
+		// fullLeftDistance.add(2,forwardVal);
+		// fullRightDistance.add(3,-turnVal);
+		// fullLeftDistance.add(3,turnVal); // Turn Right
+		// fullRightDistance.add(4,forwardVal);
+		// fullLeftDistance.add(4,forwardVal);
+
+		for (int i = 0; i < 5; i++) { // If we add extra steps, change necessary
 			encoderRight.reset();
 			encoderLeft.reset();
-			
-			while(!doneRight && !doneLeft) {
-				if (encoderRight.getDistance() < fullRightDistance.get(i)){ // Motors will only be set if we want the final distance to be forwards
+
+			while (!doneRight && !doneLeft) {
+				if (encoderRight.getDistance() < fullRightDistance.get(i)) { // Motors
+																				// will
+																				// only
+																				// be
+																				// set
+																				// if
+																				// we
+																				// want
+																				// the
+																				// final
+																				// distance
+																				// to
+																				// be
+																				// forwards
 					canTalonRight.set(motorSpeed);
 				} else {
 					canTalonRight.set(0.0);
 					doneRight = true;
 				}
-				
-				if (encoderLeft.getDistance() < fullLeftDistance.get(i)){
+
+				if (encoderLeft.getDistance() < fullLeftDistance.get(i)) {
 					canTalonLeft.set(motorSpeed);
 				} else {
 					canTalonLeft.set(0.0);
 					doneLeft = true;
 				}
 			}
-			
+
 			doneRight = false;
 			doneLeft = false;
-			
+
 		}
 	}
-	
+
 	public void robotInit() {
 		oi = new OI();
 		// instantiate the command used for the autonomous period
 		autonomousCommand = new ExampleCommand();
 		SmartDashboard.putString("DB/String 0", "hello world");
-		
-		joystickLeft = new Joystick(1);
-		joystickRight = new Joystick(2);
-		joystickOp = new Joystick(0);
+
+		joystickLeft = new Joystick(0);
+		joystickRight = new Joystick(1);
+		joystickOp = new Joystick(2);
 
 		canTalonLeft = new CANTalon(2);
 		canTalonRight = new CANTalon(1);
-		
+		canTalonLeft2 = new CANTalon(3);
+		canTalonRight2 = new CANTalon(4);
 
-		 camServoHor = new Servo(5);
-		 camServoVert = new Servo(4);
+		canTalonIntakeLeft = new CANTalon(5);
+		canTalonIntakeRight = new CANTalon(6);
 
-//		SmartDashboard.putBoolean("Camera Initialized", false);
-//		double c = VisionPractice.initializeCamera();
-//		if (c > 0) cameraInitialized = true;
-//		SmartDashboard.putBoolean("Camera Initialized", cameraInitialized);
-//		SmartDashboard.putNumber("Init Time", c);
+		canTalonElevator = new CANTalon(7);
+		canTalonElevator2 = new CANTalon(8);
 
-		compressor1 = new Compressor(10); // 10 is CANfirmed (check at 10.6.68.21) That was Ari with the CAN! Maybe he should kick the CAN. Ari aCAN!
-		compressor1.setClosedLoopControl(true); // we don't know what this is
- 
-		doubleSol1 = new DoubleSolenoid(10, 1, 0); // values confirmed to be correct
-		
+		camServoHor = new Servo(5);
+		camServoVert = new Servo(4);
+
+		// SmartDashboard.putBoolean("Camera Initialized", false);
+		// double c = VisionPractice.initializeCamera();
+		// if (c > 0) cameraInitialized = true;
+		// SmartDashboard.putBoolean("Camera Initialized", cameraInitialized);
+		// SmartDashboard.putNumber("Init Time", c);
+
+		// compressor1 = new Compressor(10); // 10 is CANfirmed (check at
+		// // 10.6.68.21) That was Ari with the
+		// // CAN! Maybe he should kick the
+		// // CAN. Ari aCAN!
+		// compressor1.setClosedLoopControl(false); // turns on/off the
+		// compressor
+		//
+		// doubleSol1 = new DoubleSolenoid(10, 1, 0); // values confirmed to be
+		// // correct
+
 		encoderRight = new Encoder(0, 1);
 		encoderLeft = new Encoder(2, 3, true);
 		encoderRight.reset();
@@ -162,63 +191,63 @@ public class Robot extends IterativeRobot {
 			autonomousCommand.start();
 
 		state = INIT_STATE;
-		
 
 	}
 
 	/**
 	 * This function is called periodically during autonomous
 	 */
-	
+
 	public void autonomousPeriodic() {
 		Scheduler.getInstance().run();
-		
+
 		switch (state) {
 
 		case INIT_STATE:
-			
+
 			canTalonLeft.set(0.0);
 			canTalonRight.set(0.0);
-//			state = MOVE_FORWARD_STATE;
+			// state = MOVE_FORWARD_STATE;
 			SmartDashboard.putString("DB/String 1", "init");
 
 			break;
 
 		case DO_SEQUENCE_STATE:
-			
+
 			SmartDashboard.putString("DB/String 1", "sequency");
-			autonSequence(10.0,10.0,0.333);
+			autonSequence(10.0, 10.0, 0.333);
 			state = PNEUMATIC_CHANGE_STATE;
-			
+
 			break;
 
 		case PNEUMATIC_CHANGE_STATE:
-			
+
 			SmartDashboard.putString("DB/String 1", "pneumatics");
-			for (int i=0; i<5; i++) { //this makes the repeats! it's not necessaries!<
-//				doubleSol1.set("Forward");
+			for (int i = 0; i < 5; i++) { // this makes the repeats! it's not
+											// necessaries!<
+				// doubleSol1.set("Forward");
 				Timer.delay(2);
-//				doubleSol1.set("Reverse");
+				// doubleSol1.set("Reverse");
 				Timer.delay(2);
 			}
-			
+
 			state = DO_SEQUENCE_DIFFERENTLY_STATE;
-//			doubleSol1.set("Off")
+			// doubleSol1.set("Off")
 
 			break;
-			
+
 		case DO_SEQUENCE_DIFFERENTLY_STATE:
 
 			SmartDashboard.putString("DB/String 1", "sequency");
-			autonSequence(20.0,10.0,0.333);
+			autonSequence(20.0, 10.0, 0.333);
 			state = WAIT_FOR_END_STATE;
-			
+
 			break;
 
 		case WAIT_FOR_END_STATE:
-			
+
 			break;
-		
+
 		}
 	}
 
@@ -232,7 +261,6 @@ public class Robot extends IterativeRobot {
 
 		encoderRight.reset();
 		encoderLeft.reset();
-		
 
 		// jaguar2 = new Jaguar(2);
 		// jaguar3 = new Jaguar(3);
@@ -253,7 +281,10 @@ public class Robot extends IterativeRobot {
 
 		System.out.println("Temperature: " + pdp.getTemperature());
 		System.out.println("Voltage " + pdp.getVoltage());
-		SmartDashboard.putNumber("Temperature", pdp.getTemperature()); // Current output is negative!!!
+		SmartDashboard.putNumber("Temperature", pdp.getTemperature()); // Current
+																		// output
+																		// is
+																		// negative!!!
 		SmartDashboard.putNumber("Voltage", pdp.getVoltage());
 		for (int i = 13; i < 16; i++) {
 			System.out.println("Current from channel " + i + " is "
@@ -306,41 +337,41 @@ public class Robot extends IterativeRobot {
 		// NIVision.Rect rect = new NIVision.Rect(10, 10, 100, 100);
 		//
 		// //camera moves
-		 double moveCamHor = ((joystickOp.getX() + 1) / 2);
-		 double moveCamVert = (1 - ((joystickOp.getY() + 1) / 2));
-		 camServoHor.set(moveCamHor);
-		 camServoVert.set(moveCamVert);
-		 
-		 System.out.println("Right Distance: " + encoderRight.getDistance());
-		 System.out.println("Left Distance: " + encoderLeft.getDistance());
-		
-		 SmartDashboard.putNumber("Right Distance: ", encoderRight.getDistance());
-		 SmartDashboard.putNumber("Left Distance", encoderLeft.getDistance());
-		 
-		 
+		double moveCamHor = ((joystickOp.getX() + 1) / 2);
+		double moveCamVert = (1 - ((joystickOp.getY() + 1) / 2));
+		camServoHor.set(moveCamHor);
+		camServoVert.set(moveCamVert);
+
+		System.out.println("Right Distance: " + encoderRight.getDistance());
+		System.out.println("Left Distance: " + encoderLeft.getDistance());
+
+		SmartDashboard
+				.putNumber("Right Distance: ", encoderRight.getDistance());
+		SmartDashboard.putNumber("Left Distance", encoderLeft.getDistance());
+
 		// //camera sees
 		// camera.getImage(frame);
 		// CameraServer.getInstance().setImage(frame);
 		//
-		 
-//		 double rateRight = encoder1.getRate(); //gets rate
-//		 double rateLeft = encoder2.getRate();
-//		 
-//		 double distanceRight = encoder1.getDistance(); // gets distance
-//		 double distanceLeft = encoder2.getDistance();
-//		 
-//		 boolean directionRight = encoder1.getDirection(); // gets direction
-//		 boolean directionLeft = encoder2.getDirection();
-//		 
-//		 SmartDashboard.putNumber("Right Motor Speed", rateRight);
-//		 SmartDashboard.putNumber("Left Motor Speed", rateLeft);
-//		 
-//		 SmartDashboard.putNumber("Right Motor Distance", distanceRight);
-//		 SmartDashboard.putNumber("Left Motor Speed", distanceLeft);
-//		 
-//		 SmartDashboard.putBoolean("Right Direction", directionRight);
-//		 SmartDashboard.putBoolean("Left Motor Direction", directionLeft);
-		 
+
+		// double rateRight = encoder1.getRate(); //gets rate
+		// double rateLeft = encoder2.getRate();
+		//
+		// double distanceRight = encoder1.getDistance(); // gets distance
+		// double distanceLeft = encoder2.getDistance();
+		//
+		// boolean directionRight = encoder1.getDirection(); // gets direction
+		// boolean directionLeft = encoder2.getDirection();
+		//
+		// SmartDashboard.putNumber("Right Motor Speed", rateRight);
+		// SmartDashboard.putNumber("Left Motor Speed", rateLeft);
+		//
+		// SmartDashboard.putNumber("Right Motor Distance", distanceRight);
+		// SmartDashboard.putNumber("Left Motor Speed", distanceLeft);
+		//
+		// SmartDashboard.putBoolean("Right Direction", directionRight);
+		// SmartDashboard.putBoolean("Left Motor Direction", directionLeft);
+
 		// movement stuff
 		double leftSpeed = (joystickLeft.getY());
 		double rightSpeed = (joystickRight.getY());
@@ -348,19 +379,19 @@ public class Robot extends IterativeRobot {
 		canTalonLeft.set(leftSpeed);
 		canTalonRight.set(-rightSpeed);
 
-//		if (joystickCamera.getRawButton(5)) {
-//
-//			doubleSol1.set(Value.kForward);
-//
-//		} else if (joystickCamera.getRawButton(6)) {
-//
-//			doubleSol1.set(Value.kReverse);
-//
-//		} else if (joystickCamera.getRawButton(3)) {
-//
-//			doubleSol1.set(Value.kOff);
-//
-//		}
+		// if (joystickCamera.getRawButton(5)) {
+		//
+		// doubleSol1.set(Value.kForward);
+		//
+		// } else if (joystickCamera.getRawButton(6)) {
+		//
+		// doubleSol1.set(Value.kReverse);
+		//
+		// } else if (joystickCamera.getRawButton(3)) {
+		//
+		// doubleSol1.set(Value.kOff);
+		//
+		// }
 
 		SmartDashboard.putNumber("CANTalon Left Bus Voltage ",
 				canTalonLeft.getBusVoltage());
@@ -368,9 +399,9 @@ public class Robot extends IterativeRobot {
 		SmartDashboard.putNumber("CANTalon Right Bus Voltage ",
 				canTalonRight.getBusVoltage());
 
-//		if (joystickCamera.getRawButton(1) && cameraInitialized) {
-//			VisionPractice.takePicture("practice");
-//		}
+		// if (joystickCamera.getRawButton(1) && cameraInitialized) {
+		// VisionPractice.takePicture("practice");
+		// }
 	}
 
 	/**
@@ -379,11 +410,61 @@ public class Robot extends IterativeRobot {
 
 	public void testPeriodic() {
 		LiveWindow.run();
-		
+		if (joystickRight.getRawButton(1)) {
+			canTalonLeft.set(joystickRight.getY() * -1);
+
+		} else {
+			canTalonLeft.set(0);
+		}
+		if (joystickRight.getRawButton(2)) {
+			canTalonRight.set(joystickRight.getY() * -1);
+
+		} else {
+			canTalonRight.set(0);
+		}
+//		if (joystickRight.getRawButton(3)) {
+//			canTalonLeft2.set(joystickRight.getY() * -1);
+//
+//		} else {
+//			canTalonLeft2.set(0);
+//		}
+//		if (joystickRight.getRawButton(4)) {
+//			canTalonRight2.set(joystickRight.getY() * -1);
+//
+//		} else {
+//			canTalonRight2.set(0);
+//		}
+//
+//		if (joystickRight.getRawButton(5)) {
+//			canTalonIntakeLeft.set(joystickRight.getY() * -1);
+//
+//		} else {
+//			canTalonIntakeLeft.set(0);
+//		}
+//		if (joystickRight.getRawButton(6)) {
+//			canTalonIntakeRight.set(joystickRight.getY() * -1);
+//
+//		} else {
+//			canTalonIntakeRight.set(0);
+//		}
+//
+//		if (joystickRight.getRawButton(7)) {
+//			canTalonElevator.set(joystickRight.getY() * -1);
+//
+//		} else {
+//			canTalonElevator.set(0);
+//		}
+//		if (joystickRight.getRawButton(8)) {
+//			canTalonElevator2.set(joystickRight.getY() * -1);
+//
+//		} else {
+//			canTalonElevator2.set(0);
+//		}
+
 	}
 
 }
 
-//LIVE LONG AND PROSPER
+// LIVE LONG AND PROSPER
 
-//The End.
+// The End.
